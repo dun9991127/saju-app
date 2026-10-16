@@ -88,24 +88,28 @@
       var v = readForm();
       var r = S.calc(v);
       err.hidden = true;
-      store('saju.last', v);
       showResult(r, v);
     } catch (ex) { err.textContent = ex.message; err.hidden = false; }
   });
-  $('back').addEventListener('click', function () { $('screen-result').hidden = true; $('screen-input').hidden = false; renderSaved(); window.scrollTo(0, 0); });
+  $('back').addEventListener('click', function () { $('screen-result').hidden = true; $('screen-input').hidden = false; savedOpen = false; renderSaved(); window.scrollTo(0, 0); });
 
   function renderSaved() {
     var list = store('saju.saved') || [];
     var box = $('saved');
-    if (!list.length) { box.innerHTML = ''; return; }
-    box.innerHTML = '<h3>저장된 사주</h3>' + list.map(function (v, i) {
+    if (!list.length) { box.innerHTML = ''; savedOpen = false; return; }
+    var head = '<button class="btn ghost" type="button" data-toggle="1" aria-expanded="' + savedOpen + '">' + (savedOpen ? '저장된 사주 숨기기' : '저장된 사주 불러오기 (' + list.length + '명)') + '</button>';
+    if (!savedOpen) { box.innerHTML = head; return; }
+    box.innerHTML = head + list.map(function (v, i) {
       return '<div class="saved-item"><button class="go" type="button" data-i="' + i + '"><b>' + esc(v.name) + '</b><span class="muted small">' +
         (v.cal === 'lunar' ? '음 ' : '양 ') + v.y + '.' + pad(v.m) + '.' + pad(v.d) + (v.unknownTime ? ' 시간 모름' : ' ' + pad(v.hh) + ':' + pad(v.mm)) + ' · ' + (v.gender === 'M' ? '남' : '여') + ' · ' + esc(v.city) +
         '</span></button><button class="x" type="button" data-del="' + i + '" aria-label="' + esc(v.name) + ' 삭제">✕</button></div>';
-    }).join('');
+    }).join('') + '<button class="btn ghost" type="button" data-clear="1">저장된 사주 모두 지우기</button>';
   }
+  var savedOpen = false;
   $('saved').addEventListener('click', function (e) {
     var b = e.target.closest('button'); if (!b) return;
+    if (b.dataset.toggle) { savedOpen = !savedOpen; renderSaved(); return; }
+    if (b.dataset.clear) { store('saju.saved', []); renderSaved(); return; }
     var list = store('saju.saved') || [];
     if (b.dataset.del != null) { list.splice(+b.dataset.del, 1); store('saju.saved', list); renderSaved(); return; }
     var v = list[+b.dataset.i]; if (!v) return;
@@ -478,8 +482,9 @@
   }
 
   // ---------- 시작 ----------
-  var last = store('saju.last');
-  setForm(last || { gender: 'M', cal: 'solar', city: '서울' });
+  // 앱을 열 때마다 빈 입력창으로 시작 (예전 버전이 남긴 마지막 입력값도 지움)
+  try { localStorage.removeItem('saju.last'); } catch (e) { }
+  setForm({ gender: 'M', cal: 'solar', city: '' });
   $('f-clear').addEventListener('click', function () { setForm({ gender: 'M', cal: 'solar', city: '' }); $('err').hidden = true; $('f-name').focus(); });
   $('f-sample').addEventListener('click', function () { setForm({ name: '예시', gender: 'F', cal: 'solar', y: 1985, m: 5, d: 15, hh: 10, mm: 30, city: '서울' }); $('form').requestSubmit(); });
   renderSaved();
